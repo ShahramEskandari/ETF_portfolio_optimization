@@ -620,11 +620,15 @@ Feel free to:
 
 ---
 
+## 📄 License
+
+[Add your license here]
+
 ---
 
 ## 👤 Author
 
-[Shahram Eskandari]
+[Add your name and contact]
 
 ---
 
