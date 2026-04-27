@@ -96,7 +96,7 @@ def walkForwardOptimization3(dataframe, train_test_array, allPossibleWeights, cr
     all_returns = []
     
     for p in periods:
-        gen_dict = GA(20, 5, p[0], allPossibleWeights, weight_return, weight_risk)
+        gen_dict = GA(100, 50, p[0], allPossibleWeights, weight_return, weight_risk)
         cost_gen = max(gen_dict["best_cost"])
         best_index_in_generation = gen_dict["best_cost"].index(max(gen_dict["best_cost"]))
         bestSolution = gen_dict["best_param"][best_index_in_generation]

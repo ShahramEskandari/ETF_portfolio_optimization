@@ -22,9 +22,9 @@ import os
 def get_user_coefficients():
     """Get risk and return coefficients from user for three portfolios"""
     portfolios = {
-        "high_risk": {"name": "High Risk", "default_return": 0.9, "default_risk": 0.1},
-        "balanced": {"name": "Balanced", "default_return": 0.7, "default_risk": 0.3},
-        "low_risk": {"name": "Low Risk", "default_return": 0.5, "default_risk": 0.5}
+        "high_risk": {"name": "High Risk", "default_return": 0.8, "default_risk": 0.2},
+        "balanced": {"name": "Balanced", "default_return": 0.5, "default_risk": 0.5},
+        "low_risk": {"name": "Low Risk", "default_return": 0.2, "default_risk": 0.8}
     }
     
     coefficients = {}
@@ -132,8 +132,8 @@ for portfolio_key, coeffs in coefficients.items():
     
     # Run GA2 with specific coefficients
     gen_dict = GA2(
-        population_size=10, 
-        generations=3, 
+        population_size=70, 
+        generations=40, 
         data=inSample_data, 
         possibleWeights=allPossibleWeights,
         weight_return=coeffs['weight_return'],
