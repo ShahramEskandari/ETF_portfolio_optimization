@@ -43,7 +43,7 @@ def create_population(population_size):
 
     return population
 
-def selection(population,data,entire_params_dict, extermums):
+def selection(population,data,entire_params_dict, extermums, weight_return=0.8, weight_risk=0.2):
     parents = []
     parents_dict = {}
     sorted_parents = {}
@@ -52,7 +52,7 @@ def selection(population,data,entire_params_dict, extermums):
         if tuple(population[i][0]) in entire_params_dict:
             cost = entire_params_dict[tuple(population[i][0])]        
         else:    
-            cost = fitness_function(data,population[i][0], extermums)
+            cost = fitness_function(data,population[i][0], extermums, weight_return, weight_risk)
             entire_params_dict[tuple(population[i][0])] = cost
 
         parents_dict[tuple(population[i][0])] = cost
@@ -65,7 +65,7 @@ def selection(population,data,entire_params_dict, extermums):
     return parents, selected_parents, entire_params_dict
 
 
-def crossover(selected_parents,data,entire_params_dict, extermums):
+def crossover(selected_parents,data,entire_params_dict, extermums, weight_return=0.8, weight_risk=0.2):
     offsprings = []
     offsprings_dict = {}
     sorted_offsprings = {}
@@ -99,7 +99,7 @@ def crossover(selected_parents,data,entire_params_dict, extermums):
         if tuple(offsprings[i]) in entire_params_dict:
             cost = entire_params_dict[tuple(offsprings[i])]
         else:
-            cost = fitness_function(data,offsprings[i], extermums)
+            cost = fitness_function(data,offsprings[i], extermums, weight_return, weight_risk)
             entire_params_dict[tuple(offsprings[i])] = cost
 
         offsprings_dict[tuple(offsprings[i])] = cost
@@ -109,7 +109,7 @@ def crossover(selected_parents,data,entire_params_dict, extermums):
     return offsprings, selected_offsprings, entire_params_dict
 
 
-def mutation(individuals, mutation_rate,data,entire_params_dict, extermums):
+def mutation(individuals, mutation_rate,data,entire_params_dict, extermums, weight_return=0.8, weight_risk=0.2):
     mutated_individuals = []
     mutated_dict = {}
     sorted_mutated = {}
@@ -128,7 +128,7 @@ def mutation(individuals, mutation_rate,data,entire_params_dict, extermums):
         if tuple(mutated_individuals[i]) in entire_params_dict:
             cost = entire_params_dict[tuple(mutated_individuals[i])]
         else:
-            cost = fitness_function(data,mutated_individuals[i], extermums)
+            cost = fitness_function(data,mutated_individuals[i], extermums, weight_return, weight_risk)
             entire_params_dict[tuple(mutated_individuals[i])] = cost
         mutated_dict[tuple(mutated_individuals[i])] = cost
     sorted_mutated = sorted(mutated_dict.items(), key=lambda x: x[1], reverse= True)
@@ -137,7 +137,7 @@ def mutation(individuals, mutation_rate,data,entire_params_dict, extermums):
     return mutated_individuals, selected_mutated, entire_params_dict
 
 
-def GA(population_size, generations, data, possibleWeights):
+def GA(population_size, generations, data, possibleWeights, weight_return=0.8, weight_risk=0.2):
     ret_risk_extermums = findMinMax(data, possibleWeights)
     generation_dict = {"generation":[], "best_param":[], "best_cost":[]}
     entire_params_dict = {}
@@ -145,13 +145,13 @@ def GA(population_size, generations, data, possibleWeights):
     mutation_rate = initial_mutation_rate
     for g in range(generations):
         # Selection
-        parents, selected_parents, entire_params_dict = selection(population, data, entire_params_dict, ret_risk_extermums)
+        parents, selected_parents, entire_params_dict = selection(population, data, entire_params_dict, ret_risk_extermums, weight_return, weight_risk)
 
         # Crossover
-        offsprings, selected_offsprings, entire_params_dict = crossover(selected_parents,data, entire_params_dict, ret_risk_extermums)
+        offsprings, selected_offsprings, entire_params_dict = crossover(selected_parents,data, entire_params_dict, ret_risk_extermums, weight_return, weight_risk)
 
         # Mutation        
-        _, selected_mutated, entire_params_dict = mutation(offsprings + parents, mutation_rate,data, entire_params_dict, ret_risk_extermums)
+        _, selected_mutated, entire_params_dict = mutation(offsprings + parents, mutation_rate,data, entire_params_dict, ret_risk_extermums, weight_return, weight_risk)
 
 
         population = selected_parents + selected_offsprings + selected_mutated

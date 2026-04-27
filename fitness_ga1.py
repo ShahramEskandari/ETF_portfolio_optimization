@@ -1,11 +1,12 @@
 import numpy as np
 import pandas as pd
 
+# Default values (for backward compatibility)
 weightReturn = 0.8
 weightRisk = 0.2
 
 
-def fitness_function(ret_data, arr_weights, extermums):
+def fitness_function(ret_data, arr_weights, extermums, weight_return=0.8, weight_risk=0.2):
     """ recieve return data as a Dataframe and array of weights"""
 
     arr_weights = np.array(arr_weights)
@@ -29,7 +30,7 @@ def fitness_function(ret_data, arr_weights, extermums):
         risk_scale = 1
     elif risk_scale < 0:
         risk_scale = 0
-    fitness = (weightReturn*ret_scale)-(weightRisk*risk_scale)
+    fitness = (weight_return*ret_scale)-(weight_risk*risk_scale)
 
     # # calculate risk adj return(if you want annual riskAdjret multiply it by 252)
     # if std_portfo == 0:

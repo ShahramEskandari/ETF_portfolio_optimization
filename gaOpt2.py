@@ -33,7 +33,7 @@ def create_population(population_size):
 
     return population
 
-def selection(population,data,entire_params_dict, allPossibleWeights):
+def selection(population,data,entire_params_dict, allPossibleWeights, weight_return=0.8, weight_risk=0.2):
     parents = []
     parents_dict = {}
     sorted_parents = {}
@@ -42,7 +42,7 @@ def selection(population,data,entire_params_dict, allPossibleWeights):
         if tuple(population[i][0]) in entire_params_dict:
             cost = entire_params_dict[tuple(population[i][0])]        
         else:    
-            cost = walkForwardOptimization3(data, population[i][0], allPossibleWeights, create_csv=False)
+            cost = walkForwardOptimization3(data, population[i][0], allPossibleWeights, create_csv=False, weight_return=weight_return, weight_risk=weight_risk)
             entire_params_dict[tuple(population[i][0])] = cost
 
         parents_dict[tuple(population[i][0])] = cost
@@ -55,7 +55,7 @@ def selection(population,data,entire_params_dict, allPossibleWeights):
     return parents, selected_parents, entire_params_dict
 
 
-def crossover(selected_parents,data,entire_params_dict, allPossibleWeights):
+def crossover(selected_parents,data,entire_params_dict, allPossibleWeights, weight_return=0.8, weight_risk=0.2):
     offsprings = []
     offsprings_dict = {}
     sorted_offsprings = {}
@@ -83,7 +83,7 @@ def crossover(selected_parents,data,entire_params_dict, allPossibleWeights):
         if tuple(offsprings[i]) in entire_params_dict:
             cost = entire_params_dict[tuple(offsprings[i])]
         else:
-            cost = walkForwardOptimization3(data, offsprings[i], allPossibleWeights, create_csv=False)
+            cost = walkForwardOptimization3(data, offsprings[i], allPossibleWeights, create_csv=False, weight_return=weight_return, weight_risk=weight_risk)
             entire_params_dict[tuple(offsprings[i])] = cost
 
         offsprings_dict[tuple(offsprings[i])] = cost
@@ -93,7 +93,7 @@ def crossover(selected_parents,data,entire_params_dict, allPossibleWeights):
     return offsprings, selected_offsprings, entire_params_dict
 
 
-def mutation(individuals, mutation_rate,data,entire_params_dict, allPossibleWeights):
+def mutation(individuals, mutation_rate,data,entire_params_dict, allPossibleWeights, weight_return=0.8, weight_risk=0.2):
     mutated_individuals = []
     mutated_dict = {}
     sorted_mutated = {}
@@ -115,7 +115,7 @@ def mutation(individuals, mutation_rate,data,entire_params_dict, allPossibleWeig
         if tuple(mutated_individuals[i]) in entire_params_dict:
             cost = entire_params_dict[tuple(mutated_individuals[i])]
         else:
-            cost = walkForwardOptimization3(data, mutated_individuals[i], allPossibleWeights, create_csv=False)
+            cost = walkForwardOptimization3(data, mutated_individuals[i], allPossibleWeights, create_csv=False, weight_return=weight_return, weight_risk=weight_risk)
             entire_params_dict[tuple(mutated_individuals[i])] = cost
         mutated_dict[tuple(mutated_individuals[i])] = cost
     sorted_mutated = sorted(mutated_dict.items(), key=lambda x: x[1], reverse= True)
@@ -124,20 +124,20 @@ def mutation(individuals, mutation_rate,data,entire_params_dict, allPossibleWeig
     return mutated_individuals, selected_mutated, entire_params_dict
 
 
-def GA2(population_size, generations, data, possibleWeights):
+def GA2(population_size, generations, data, possibleWeights, weight_return=0.8, weight_risk=0.2):
     generation_dict = {"generation":[], "best_param":[], "best_cost":[]}
     entire_params_dict = {}
     population = create_population(population_size)
     mutation_rate = initial_mutation_rate
     for g in range(generations):
         # Selection
-        parents, selected_parents, entire_params_dict = selection(population, data, entire_params_dict, possibleWeights)
+        parents, selected_parents, entire_params_dict = selection(population, data, entire_params_dict, possibleWeights, weight_return, weight_risk)
 
         # Crossover
-        offsprings, selected_offsprings, entire_params_dict = crossover(selected_parents,data, entire_params_dict, possibleWeights)
+        offsprings, selected_offsprings, entire_params_dict = crossover(selected_parents,data, entire_params_dict, possibleWeights, weight_return, weight_risk)
 
         # Mutation        
-        _, selected_mutated, entire_params_dict = mutation(offsprings + parents, mutation_rate,data, entire_params_dict, possibleWeights)
+        _, selected_mutated, entire_params_dict = mutation(offsprings + parents, mutation_rate,data, entire_params_dict, possibleWeights, weight_return, weight_risk)
 
 
         population = selected_parents + selected_offsprings + selected_mutated

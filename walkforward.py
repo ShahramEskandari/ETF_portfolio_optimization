@@ -88,22 +88,22 @@ def walkForwardOptimization2(dataframe, train_test_array, allPossibleWeights):
     return fitness_value
 
 
-def walkForwardOptimization3(dataframe, train_test_array, allPossibleWeights, create_csv=False, csv_name=None):
+def walkForwardOptimization3(dataframe, train_test_array, allPossibleWeights, create_csv=False, csv_name=None, weight_return=0.8, weight_risk=0.2):
     periods = walk_forward_split(dataframe, train_test_array)
 
-    metics = []
+    metrics = []
     all_dates = []
     all_returns = []
     
     for p in periods:
-        gen_dict = GA(100, 50, p[0], allPossibleWeights)
+        gen_dict = GA(20, 5, p[0], allPossibleWeights, weight_return, weight_risk)
         cost_gen = max(gen_dict["best_cost"])
         best_index_in_generation = gen_dict["best_cost"].index(max(gen_dict["best_cost"]))
         bestSolution = gen_dict["best_param"][best_index_in_generation]
 
         # Calculate returns for the test period
         returns = calc_returnOfPoints(p[1], bestSolution)
-        metics.append(returns)
+        metrics.append(returns)
         
         # Store dates and returns for CSV creation
         if create_csv:
@@ -111,7 +111,7 @@ def walkForwardOptimization3(dataframe, train_test_array, allPossibleWeights, cr
             all_returns.extend(returns.tolist())
 
     # Merge all metrics
-    merged_metrics = np.concatenate(metics)
+    merged_metrics = np.concatenate(metrics)
         
     fitness_value = merged_metrics.mean()
     

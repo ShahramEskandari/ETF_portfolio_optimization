@@ -1,0 +1,29 @@
+Test,Portfolio,Statistic,P-value,Interpretation
+Shapiro-Wilk,highRisk,0.9676998675461188,0.0013432561808359002,Not Normal
+Shapiro-Wilk,lowRisk,0.9803868170174902,0.030704596416915638,Not Normal
+Shapiro-Wilk,normalRisk,0.9588411184538638,0.00019191103990288258,Not Normal
+Shapiro-Wilk,agas,0.9768124877714536,0.01222226007235613,Not Normal
+Shapiro-Wilk,close_overal,0.9773523927054,0.01402241635406385,Not Normal
+Shapiro-Wilk,equalweight,0.9701445426329246,0.0023782613076064538,Not Normal
+Shapiro-Wilk,markowitz,0.9775936851753131,0.01491367995596231,Not Normal
+Levene,agas vs normalRisk,39.46092206724001,1.1833085488248087e-09,Different Variances
+Levene,highRisk vs normalRisk,0.3884612276512946,0.5335860761273283,Equal Variances
+Levene,lowRisk vs normalRisk,51.03943670755571,6.9790528672353266e-12,Different Variances
+Levene,highRisk vs lowRisk,65.34131114954258,1.5921439902830858e-14,Different Variances
+Levene,highRisk vs markowitz,95.95600356846357,8.003540971894132e-20,Different Variances
+Levene,lowRisk vs markowitz,12.303551254131103,0.0005217722676930597,Different Variances
+Levene,normalRisk vs markowitz,77.37767050056407,1.15987881776637e-16,Different Variances
+Levene,highRisk vs equalweight,8.111646889447941,0.004704102092299917,Different Variances
+Levene,lowRisk vs equalweight,43.06135958191448,2.347022704697108e-10,Different Variances
+Levene,normalRisk vs equalweight,4.3904615631876265,0.03698428002822701,Different Variances
+Mann-Whitney U,agas vs normalRisk,11237.0,0.986724644752203,No significant difference
+Mann-Whitney U,close_overal vs normalRisk,11106.0,0.8485136536273712,No significant difference
+Mann-Whitney U,highRisk vs normalRisk,10291.0,0.2019996000944818,No significant difference
+Mann-Whitney U,lowRisk vs highRisk,12540.0,0.08607515412322239,No significant difference
+Mann-Whitney U,lowRisk vs normalRisk,10960.0,0.6999719949739479,No significant difference
+Mann-Whitney U,highRisk vs markowitz,9725.0,0.042429032549108514,Significant difference
+Mann-Whitney U,lowRisk vs markowitz,10931.0,0.6715945087149227,No significant difference
+Mann-Whitney U,normalRisk vs markowitz,11333.0,0.9125544104096915,No significant difference
+Mann-Whitney U,highRisk vs equalweight,10579.0,0.37211764503003963,No significant difference
+Mann-Whitney U,lowRisk vs equalweight,11624.0,0.6190677159510323,No significant difference
+Mann-Whitney U,normalRisk vs equalweight,11718.0,0.5337465708188411,No significant difference
