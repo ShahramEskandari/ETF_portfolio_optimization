@@ -1,94 +1,99 @@
 # ETF Portfolio Optimization using Nested Genetic Algorithms
 
 A portfolio optimization system that uses **nested genetic algorithms** and **walk-forward analysis** to:
-- Optimize ETF portfolio weights (inner GA)
-- Optimize walk-forward train/test window lengths (outer GA)
-- Evaluate three risk profiles (High Risk, Balanced, Low Risk) and compare them to benchmark indices
 
-All final outputs (JSON, CSVs, charts, metrics, statistical tests) are produced automatically and saved in the `finalOutputs/` folder by running a single script: `main.py`.
+- Optimize ETF portfolio weights (inner GA, GA1)
+- Optimize walk-forward train/test window lengths (outer GA, GA2)
+- Evaluate three risk profiles (High Risk, Balanced, Low Risk) against **benchmark indices**, a **Markowitz (max-Sharpe)** baseline, and an **equal-weight** baseline
+
+Log returns are built from `data/closeData.csv`. **GA2 is fitted only on the in-sample slice** (first 80% of trading days by default). **Out-of-sample** is the remaining 20%; final evaluation merges GA portfolios, benchmarks, and baselines on overlapping dates.
+
+Running `python main.py` drives the full pipeline and writes outputs under `finalOutputs/`.
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
+
 - [Overview](#overview)
-- [Project Architecture](#project-architecture)
+- [Project architecture](#project-architecture)
 - [Installation](#installation)
-- [Usage Workflow](#usage-workflow)
-- [File Descriptions](#file-descriptions)
-- [Algorithm Details](#algorithm-details)
+- [Usage workflow](#usage-workflow)
+- [File descriptions](#file-descriptions)
+- [Algorithm details](#algorithm-details)
 - [Configuration](#configuration)
+- [Output files](#output-files)
+- [Notes and troubleshooting](#notes-and-troubleshooting)
 
 ---
 
 ## Overview
 
-This project implements a **two-level (nested) genetic algorithm**:
+**Nested GA:**
 
-1. **Outer GA (GA2)** – optimizes walk-forward parameters:
-   - `train_period`: length of the training window (days)
-   - `test_period`: length of the test window (days)
+1. **Outer GA (GA2, `gaOpt2.py`)** – optimizes walk-forward parameters:
+   - `train_period`: training window length (rows / trading days)
+   - `test_period`: test window length  
+   Constraint: `train_period >= test_period`; both are drawn from `{5, 10, …, 250}`.
 
-2. **Inner GA (GA1)** – optimizes weights for an 8-ETF portfolio under allocation constraints.
+2. **Inner GA (GA1, `gaOpt1.py`)** – optimizes weights for an **8-ETF** long-only portfolio under the same asset-class floors as `makeArrayOfWeights.is_valid`.
 
-The system:
-- Builds log returns from raw close prices (`data/closeData.csv`)
-- Searches for optimal walk-forward parameters for 3 risk profiles (user-defined coefficients)
-- Generates daily portfolio returns for each profile
-- Computes performance metrics, charts, and statistical tests against benchmarks
+**Data split (`main.py`):**
 
-All of this is orchestrated from `main.py` in a single execution.
+- `time_series_split(data_return, test_size=0.2)` → **in-sample** ≈ first 80% of rows, **out-of-sample** ≈ last 20%.
+- **GA2** runs on `inSample_data` only.
+- After optimal `(train_period, test_period)` are found, **daily return CSVs** are built by `walkForwardOptimization3` on:
+  `pd.concat([inSample_data.tail(train_period), outSample_data])`  
+  so the last in-sample tail plus full out-of-sample form the series that walk-forward windows slide over.
+
+**Final evaluation (`generate_final_results.py`):**
+
+- Loads the three GA portfolio CSVs, `data/logRetBenchETF.csv` (`agas`, `close_overal`), and test-period series from:
+  - `markowitz_train_test_project` → `markowitz_test_returns.csv`
+  - `equal_weight_train_test_project` → `equal_weight_test_returns.csv`  
+  (both trained on `inSample_data`, tested on `outSample_data`, matching the 80/20 split).
+- Metrics, plots, and statistical tests use the **inner join** of all these series on `Date`.
 
 ---
 
-## Project Architecture
+## Project architecture
 
 ```text
 ETF_portfolio_optimization/
 │
-├── data/                               # Data directory
-│   ├── closeData.csv                   # Close prices (REQUIRED INPUT)
-│   └── logRetBenchETF.csv              # Benchmark ETF log returns (REQUIRED INPUT)
+├── data/
+│   ├── closeData.csv              # Close prices (required)
+│   └── logRetBenchETF.csv         # Benchmark log returns (required for final eval)
 │
-├── Core Algorithm Files
-│   ├── main.py                         # Main pipeline: GA2 + GA1 + final outputs
-│   ├── gaOpt1.py                       # Inner GA: portfolio weight optimization
-│   ├── gaOpt2.py                       # Outer GA: walk-forward parameter optimization
-│   ├── fitness_ga1.py                  # Fitness functions for portfolio evaluation
-│   ├── walkforward.py                  # Walk-forward analysis implementation
-│   └── makeArrayOfWeights.py           # Generation of valid portfolio weight combinations
+├── main.py                        # Entry: split data, GA2 × 3, CSVs, generate_final_results
+├── gaOpt1.py                      # Inner GA: portfolio weights
+├── gaOpt2.py                      # Outer GA: walk-forward lengths
+├── fitness_ga1.py                 # Inner-GA fitness (scaled return − risk)
+├── walkforward.py                 # Walk-forward splits + walkForwardOptimization3 (+ legacy helpers)
+├── makeArrayOfWeights.py          # Valid weight enumeration (0.1 steps, constraints)
+├── generate_final_results.py      # Metrics, charts, tests; calls Markowitz & equal-weight
+├── markowitz_train_test.py        # Max-Sharpe (SLSQP), GA-aligned constraints; test CSV
+├── equal_weight_train_test.py     # 1/N portfolio; test CSV
 │
-├── Evaluation & Results
-│   └── generate_final_results.py       # Pure-Python evaluation (metrics, charts, tests)
-│
-├── finalOutputs/                       # All final outputs created by main.py
+├── finalOutputs/                  # Created at run time (not shipped)
 │   ├── optimal_parameters.json
 │   ├── dailyReturn_highRisk.csv
+│   ├── dailyReturn_normalRisk.csv  # Balanced profile
 │   ├── dailyReturn_lowRisk.csv
-│   ├── dailyReturn_normalRisk.csv
+│   ├── markowitz_test_returns.csv
+│   ├── equal_weight_test_returns.csv
 │   ├── Results_metrics.csv
 │   ├── Statistical_Tests_Results.csv
-│   ├── Cum_highRisk.png
-│   ├── Cum_lowRisk.png
-│   ├── Cum_normalRisk.png
-│   ├── Cum_portfolioS.png
-│   ├── DD_normalRisk.png
-│   └── DD_portfolioS.png
+│   ├── Cum_*.png, DD_*.png       # See [Output files](#output-files)
 │
-├── requirements.txt                    # Python dependencies
-└── README.md                           # This file
+├── requirements.txt
+└── README.md
 ```
 
 ---
 
 ## Installation
 
-### Prerequisites
-- Python 3.8 or higher
-- `pip` package manager
-
-### Setup Steps
-
-1. **Create and activate a virtual environment**
+**Prerequisites:** Python 3.8+, `pip`.
 
 ```bash
 python -m venv venv
@@ -103,48 +108,32 @@ python -m venv venv
 source venv/bin/activate
 ```
 
-2. **Install dependencies**
-
 ```bash
 pip install -r requirements.txt
 ```
 
-**Required packages:**
-- `numpy>=1.24.0` – numerical computations
-- `pandas>=2.0.0` – data manipulation
-- `scipy>=1.11.0` – statistical tests (used in `generate_final_results.py`)
-- `matplotlib>=3.7.0`, `seaborn>=0.12.0` – plotting
-- `pyarrow>=12.0.0` – optional, speeds up some pandas operations
+**Main libraries:** `numpy`, `pandas`, `scipy` (tests + Markowitz optimizer), `matplotlib`, `seaborn`; optional `pyarrow` for pandas I/O.
 
 ---
 
-## Usage Workflow
+## Usage workflow
 
-The project is designed so that **one command** runs the entire optimization and evaluation pipeline.
+### 1. Input data
 
-### STEP 1 – Prepare Input Data
+**`data/closeData.csv`**
 
-**Required files:**
+- Index or column: `date` (parsed as dates).
+- Columns include (names matter for class constraints):  
+  `close_afran`, `close_yaghoot`, `close_goldMofid`, `close_nahal`, `close_sahar`, `close_agas`, `close_sarv`, `close_atlas`.
+- Log returns in code: `log(close / close.shift(1))`; columns become `ret_*`.
 
-1. **Close prices**: `data/closeData.csv`
-   - Format: CSV with `date` as index column
-   - Columns: `date`, `close_afran`, `close_yaghoot`, `close_goldMofid`, `close_nahal`, `close_sahar`, `close_agas`, `close_sarv`, `close_atlas`
-   - Date format: YYYY-MM-DD
-   - Example:
-     ```csv
-     date,close_afran,close_yaghoot,close_goldMofid,close_nahal,close_sahar,close_agas,close_sarv,close_atlas
-     2021-02-13,12663,11878,31124.36,9865.96,10908.05,69174.34,6360.23,20902.53
-     ```
+**`data/logRetBenchETF.csv`**
 
-2. **Benchmark returns**: `data/logRetBenchETF.csv`
-   - Format: CSV with `date` as index column
-   - Required columns: `date`, `agas`, `close_overal`
-   - Date format: M/D/YYYY (e.g., `2/15/2021`)
-   - Contains log returns for benchmark ETFs
+- Must include `date` (parsed in code with `format='%m/%d/%Y'`), plus **`agas`** and **`close_overal`** log-return columns.
 
-> **Note**: Log returns for the optimization are computed automatically inside `main.py` from `closeData.csv`. You do **not** need to pre-generate `logRetData.csv` or `simpleRetData.csv`.
+You do **not** need pre-built `logRetData.csv`; returns are computed in `main.py` / evaluation code.
 
-### STEP 2 – Run Full Optimization & Evaluation
+### 2. Run the pipeline
 
 From the project root:
 
@@ -152,443 +141,181 @@ From the project root:
 python main.py
 ```
 
-**What `main.py` does:**
+**Interactive coefficients (`get_user_coefficients`):**
 
-1. **Data loading & preprocessing**
-   - Reads `data/closeData.csv`
-   - Computes log returns: `log_returns = log(close / close.shift(1))`
-   - Renames columns from `close_*` to `ret_*`
-   - Creates `finalOutputs/` directory if it doesn't exist
+- Three portfolios: **High Risk**, **Balanced**, **Low Risk**.
+- Defaults if you press Enter:
+  - High Risk: return **0.8**, risk **0.2**
+  - Balanced: **0.5** / **0.5**
+  - Low Risk: **0.2** / **0.8**
+- Coefficients must sum to **1.0** within **0.01** (`main.py`).
 
-2. **Portfolio weight space generation**
-   - Calls `make_weights()` in `makeArrayOfWeights.py`
-   - Generates all valid 8-asset weight combinations (step size: 0.1)
-   - Filters by portfolio constraints (~165,000 valid combinations)
-   - **Note**: This step takes a few minutes
+**Steps executed:**
 
-3. **User-defined risk/return preferences**
-   - Prompts user for **return** and **risk** coefficients for three portfolios:
-     - **High Risk** (default: return=0.9, risk=0.1)
-     - **Balanced** (default: return=0.7, risk=0.3)
-     - **Low Risk** (default: return=0.5, risk=0.5)
-   - User can press Enter to accept defaults or enter custom values
-   - Validation: coefficients must sum to 1.0
+1. Load closes, compute log returns, **80/20** time split.
+2. `make_weights()` – enumerate valid 8-asset weights (step **0.1**); on the order of **~165,000** valid vectors (runtime: minutes).
+3. For each profile: **`GA2(population_size=70, generations=40, data=inSample_data, …)`** → best `(train_period, test_period)` and fitness (mean walk-forward test daily return on in-sample).
+4. Save `finalOutputs/optimal_parameters.json`.
+5. For each profile: `walkForwardOptimization3` on  
+   `concat(inSample_data.tail(train_period), outSample_data)` with `create_csv=True` → daily return CSVs.
+6. **`generate_final_results(insample_returns=inSample_data, outsample_returns=outSample_data)`** → baselines, merge, metrics, plots, tests.
 
-4. **Outer GA optimization (GA2) for each profile**
-   - For each of the three risk profiles:
-     - Runs `GA2` (from `gaOpt2.py`) with profile-specific `(weight_return, weight_risk)`
-     - **GA2 parameters**: `population_size=40`, `generations=10`
-     - Searches over `[train_period, test_period]`:
-       - `train_period ∈ {5, 10, ..., 250}` (steps of 5)
-       - `test_period ∈ {5, 10, ..., 250}` (steps of 5)
-       - Constraint: `train_period >= test_period`
-     - Uses walk-forward analysis (`walkForwardOptimization3`) and inner GA (`GA`) to evaluate each candidate
-   - Stores optimal parameters for each profile:
-     - `train_period` and `test_period`
-     - Best fitness (mean daily return)
-     - Risk/return weights used
-   - Saves to: `finalOutputs/optimal_parameters.json`
-
-5. **Generate daily return series for each portfolio**
-   - For each risk profile:
-     - Re-runs `walkForwardOptimization3` using optimal `(train_period, test_period)` and `(weight_return, weight_risk)`
-     - **Inner GA parameters** (used in walk-forward): `population_size=40`, `generations=10`
-     - Saves daily portfolio returns to:
-       - `finalOutputs/dailyReturn_highRisk.csv`
-       - `finalOutputs/dailyReturn_normalRisk.csv` (note: "Balanced" → "normalRisk" in filename)
-       - `finalOutputs/dailyReturn_lowRisk.csv`
-
-6. **Generate final evaluation outputs**
-   - Calls `generate_final_results(output_dir="finalOutputs", benchmark_file="data/logRetBenchETF.csv")`
-   - This script:
-     - Loads benchmark returns from `data/logRetBenchETF.csv`
-     - Merges portfolio returns with benchmarks
-     - Computes performance metrics:
-       - Mean Daily Log Return
-       - Standard Deviation
-       - Sharpe Ratio
-       - Cumulative Return %
-       - Maximum Drawdown (MDD)
-     - Saves metrics to: `finalOutputs/Results_metrics.csv`
-     - Generates charts:
-       - `finalOutputs/Cum_highRisk.png`
-       - `finalOutputs/Cum_lowRisk.png`
-       - `finalOutputs/Cum_normalRisk.png`
-       - `finalOutputs/Cum_portfolioS.png` (all portfolios comparison)
-       - `finalOutputs/DD_normalRisk.png`
-       - `finalOutputs/DD_portfolioS.png` (all portfolios drawdown comparison)
-     - Runs statistical tests:
-       - Shapiro-Wilk normality tests (for each portfolio/benchmark)
-       - Levene variance equality tests (portfolio comparisons)
-       - Mann-Whitney U tests (portfolio vs benchmark comparisons)
-     - Saves test results to: `finalOutputs/Statistical_Tests_Results.csv`
-
-7. **Final summary**
-   - Prints summary of:
-     - Optimal walk-forward parameters for each risk profile
-     - Mean daily returns (and annualized approximations)
-     - Complete list of all files written to `finalOutputs/`
-
-**Expected runtime:**
-- Weight generation: ~2-5 minutes
-- GA2 optimization per portfolio: Several hours (depends on data size and GA parameters)
-- Daily return generation: ~1-2 hours per portfolio
-- Final evaluation: ~1-2 minutes
-
-**Total**: Several hours to complete all three portfolios (consider running overnight or on a powerful machine).
+**Runtime:** Highly dependent on data length and GA settings; outer GA with population 70 × generations 40 and inner GA **100 × 50** per walk-forward window can take **many hours** for three profiles. Consider smaller `population_size` / `generations` for experiments.
 
 ---
 
-## File Descriptions
+## File descriptions
 
-### Core Algorithm Files
+### `main.py`
 
-#### `main.py`
-Main entry point for the entire pipeline.
+- `get_user_coefficients()` – interactive return/risk weights.
+- `save_optimal_parameters()` / `load_optimal_parameters()` – JSON I/O (load helper exists; pipeline saves after GA2).
+- `time_series_split` – 80% in-sample / 20% out-of-sample.
+- Orchestrates weights → GA2 × 3 → CSVs → `generate_final_results`.
 
-**Functions:**
-- `get_user_coefficients()`: Interactive prompt for risk/return coefficients
-- `save_optimal_parameters()`: Saves optimal parameters to JSON
-- `load_optimal_parameters()`: Loads saved parameters (currently unused but available)
+### `gaOpt1.py` (inner GA)
 
-**Workflow:**
-1. Loads `data/closeData.csv` and computes log returns
-2. Creates `finalOutputs/` directory
-3. Generates valid weight combinations
-4. Collects user coefficients for three portfolios
-5. Runs GA2 optimization for each portfolio
-6. Generates daily return CSVs
-7. Calls `generate_final_results()` for metrics, charts, and tests
+- `generate_gene()` – random feasible weights (rounded to **3** decimals, sum 1, class mins).
+- `GA(population_size, generations, data, possibleWeights, weight_return, weight_risk)` – selection (top **75%**), crossover, mutation, fitness cache.
+- Mutation rates: `initial_mutation_rate=0.05`, `high_mutation_rate=0.1`.  
+  From generation **15** onward: if the best fitness **stalls** over recent generations, mutation switches to high; if it remains flat under high mutation, the loop **breaks** early (see file for exact conditions).
 
-#### `gaOpt1.py` (Inner GA)
-Optimizes 8-ETF portfolio weights.
+### `gaOpt2.py` (outer GA)
 
-**Key Functions:**
-- `generate_gene()`: Creates random valid weight vectors (8 weights summing to 1, satisfying constraints)
-- `create_population(population_size)`: Initializes population
-- `selection()`: Selects top 75% of population based on fitness
-- `crossover()`: Single-point crossover with normalization
-- `mutation()`: Random gene mutation with constraint checking
-- `GA(population_size, generations, data, possibleWeights, weight_return=0.8, weight_risk=0.2)`: Main GA loop
+- Chromosome: `[train_period, test_period]` with `train_period >= test_period`.
+- `GA2` uses `walkForwardOptimization3` as fitness (mean test-window daily returns), same adaptive mutation / early-stop pattern as GA1 from generation **15**.
 
-**Parameters:**
-- `initial_mutation_rate = 0.05` (5%)
-- `high_mutation_rate = 0.1` (10%)
-- Adaptive mutation: switches to high rate if no improvement for 8 consecutive generations
-- Early stopping: stops if still no improvement after high mutation period
+### `walkforward.py`
 
-**Constraints enforced:**
-- Sum of weights = 1.0
-- Equity ETFs (indices 0-1): sum ≥ 12.5%
-- Gold ETFs (indices 2-4): sum ≥ 12.5%
-- Fixed Income ETFs (indices 5-7): sum ≥ 12.5%
-- All weights ≥ 0 (no short selling)
+- `walk_forward_split` – non-overlapping test blocks; advance by `test_period`.
+- **`walkForwardOptimization3`** – for each split: **`GA(100, 50, train_df, allPossibleWeights, weight_return, weight_risk)`**, apply best weights to test rows, mean of all test daily returns = fitness; optional CSV of concatenated test returns (`Date`, `Return`).
+- `walkForwardOptimization` / `walkForwardOptimization2` – older experiments (different inner GA sizes / metrics); not used by `main.py`.
 
-#### `gaOpt2.py` (Outer GA)
-Optimizes `[train_period, test_period]` parameters.
+### `fitness_ga1.py`
 
-**Key Functions:**
-- `generate_gene()`: Creates random `[train_period, test_period]` with `train_period >= test_period`
-- `create_population(population_size)`: Initializes population
-- `selection()`: Selects top 75% based on fitness (calls `walkForwardOptimization3`)
-- `crossover()`: Single-point crossover for period parameters
-- `mutation()`: Mutates periods within valid ranges (maintains `train_period >= test_period`)
-- `GA2(population_size, generations, data, possibleWeights, weight_return=0.8, weight_risk=0.2)`: Main GA loop
+- `findMinMax` over **all** `possibleWeights` for scaling.
+- `fitness_function`:  
+  `fitness = weight_return * ret_scale - weight_risk * risk_scale`  
+  with `ret_scale`, `risk_scale` in **[0, 1]** from min/max mean return and std across the discrete weight set.
+- `calc_returnOfPoints` – daily portfolio log returns for a weight vector.
 
-**Parameters:**
-- `initial_mutation_rate = 0.05` (5%)
-- `high_mutation_rate = 0.1` (10%)
-- Same adaptive mutation and early stopping logic as GA1
+### `makeArrayOfWeights.py`
 
-**Chromosome structure:**
-```python
-np.array([train_period, test_period])
-# train_period ∈ {5, 10, ..., 250}
-# test_period ∈ {5, 10, ..., 250}
-# Constraint: train_period >= test_period
-```
+- `make_weights()` – Cartesian product of `{0.0, 0.1, …, 1.0}^8` filtered by `is_valid`.
+- `is_valid`: sum ≈ 1, each class ≥ **12.5%**, non-negative.
 
-#### `walkforward.py`
-Implements walk-forward analysis.
+### `markowitz_train_test.py`
 
-**Key Functions:**
-- `walk_forward_split(df, arr_train_test)`: Splits time series into rolling train/test windows
-  - Step size = `test_period` (non-overlapping test sets)
-  - Returns list of `(train_df, test_df)` tuples
+- `markowitz_train_test_project(train_returns, test_returns, …)` – **SLSQP** max Sharpe on train, long-only, optional same class constraints as GA; writes test log returns to `finalOutputs/markowitz_test_returns.csv` when requested.
 
-- `walkForwardOptimization3(dataframe, train_test_array, allPossibleWeights, create_csv=False, csv_name=None, weight_return=0.8, weight_risk=0.2)`:
-  - Main walk-forward function
-  - For each train window:
-    - Runs `GA(population_size=40, generations=10, ...)` to find optimal weights
-  - For each corresponding test window:
-    - Applies optimal weights to compute daily returns
-  - Returns: mean daily return across all test periods
-  - If `create_csv=True`:
-    - Concatenates all test-period daily returns
-    - Saves to CSV with `Date` index and `Return` column
+### `equal_weight_train_test.py`
 
-**Other functions (legacy/unused):**
-- `walkForwardOptimization()`: Uses `GA(70, 40, ...)` with risk-adjusted return metric
-- `walkForwardOptimization2()`: Uses `GA(200, 50, ...)` with benchmark threshold
+- `equal_weight_train_test_project` – fixed **1/N** weights; test log returns to `finalOutputs/equal_weight_test_returns.csv` when requested.
 
-#### `fitness_ga1.py`
-Portfolio evaluation functions.
+### `generate_final_results.py`
 
-**Key Functions:**
-- `fitness_function(ret_data, arr_weights, extermums, weight_return=0.8, weight_risk=0.2)`:
-  - Calculates portfolio mean return and standard deviation
-  - Scales return and risk to [0, 1] based on extrema
-  - Returns weighted combination:
-    ```
-    fitness = weight_return * return_scaled - weight_risk * risk_scaled
-    ```
-
-- `calc_riskAdjRet(ret_data, arr_weights)`: Sharpe-like ratio (mean/std)
-
-- `calc_returnOfPoints(ret_data, arr_weights)`: Returns array of daily portfolio returns
-
-- `findMinMax(data, weights)`: Finds min/max return and risk across all valid weights for normalization
-
-**Default values:**
-- `weightReturn = 0.8`
-- `weightRisk = 0.2`
-
-#### `makeArrayOfWeights.py`
-Generates all valid portfolio weight combinations.
-
-**Functions:**
-- `make_weights()`:
-  - Generates all 8-asset combinations with step size = 0.1
-  - Filters by `is_valid()` constraints
-  - Returns ~165,000 valid combinations
-
-- `is_valid(gene)`:
-  - Validates: sum = 1.0, asset class minimums, non-negativity
-
-### Evaluation & Results
-
-#### `generate_final_results.py`
-Standalone evaluation module (imported by `main.py`).
-
-**Functions:**
-- `generate_final_results(output_dir="finalOutputs", benchmark_file="data/logRetBenchETF.csv")`: Main function
-- `calculate_metrics(returns)`: Computes performance metrics and drawdowns
-- `plot_cumulative_returns(returns, output_dir, portfolios)`: Generates cumulative return charts
-- `plot_drawdowns(drawdowns, output_dir, portfolios)`: Generates drawdown charts
-- `perform_statistical_tests(returns, output_dir)`: Runs statistical tests and saves results
-
-**Inputs:**
-- Portfolio CSVs from `finalOutputs/` (dailyReturn_highRisk.csv, etc.)
-- Benchmark returns from `data/logRetBenchETF.csv`
-
-**Outputs:**
-- `Results_metrics.csv`: Performance metrics table
-- `Statistical_Tests_Results.csv`: Statistical test results
-- 6 PNG charts: Cumulative returns and drawdowns
+- `generate_final_results(insample_returns, outsample_returns, output_dir=..., benchmark_file=...)` – runs both baselines, merges all series, `calculate_metrics`, `plot_cumulative_returns`, `plot_drawdowns`, `perform_statistical_tests` (Shapiro, Levene, Mann–Whitney across portfolios, benchmarks, **markowitz**, **equalweight** where columns exist).
 
 ---
 
-## Algorithm Details
+## Algorithm details
 
-### Nested GA Architecture
+### Nested structure
 
-```
-GA2 (Outer)
-├─ Chromosome: [train_period, test_period]
-├─ Population: 40 individuals
-├─ Generations: 10 (max)
-├─ Fitness: Mean return from walk-forward analysis
-└─ Evaluation:
-    └─ Walk-Forward Analysis
-        ├─ Split data into train/test windows
-        └─ For each window:
-            ├─ GA1 (Inner)
-            │   ├─ Chromosome: [w1, w2, ..., w8] (8 ETF weights)
-            │   ├─ Population: 40 individuals
-            │   ├─ Generations: 10 (max)
-            │   ├─ Fitness: Scaled return-risk combination
-            │   └─ Find optimal weights for train period
-            └─ Evaluate optimal weights on test period
+```text
+GA2 (outer, on in-sample data)
+  chromosome: [train_period, test_period]
+  population: 70, max generations: 40 (early stop possible)
+  fitness: mean daily return over all walk-forward test segments
+    └── for each segment:
+          GA1 (inner): population 100, max generations 50 (early stop possible)
+          fitness: scaled return/risk (user return & risk coefficients)
+          apply best weights to test segment → daily returns
 ```
 
-### Portfolio Constraints
+### Portfolio constraints
 
-All portfolios must satisfy:
+1. Weights sum to **1**, all **≥ 0**.
+2. **Equity** (indices 0–1): sum ≥ **12.5%**.
+3. **Gold** (2–4): sum ≥ **12.5%**.
+4. **Fixed income** (5–7): sum ≥ **12.5%**.
 
-1. **Sum to 1**: `Σ(weights) = 1.0`
+ETF mapping matches `close_*` column names in `data/closeData.csv`.
 
-2. **Asset Class Minimums**:
-   - Equity ETFs (afran + yaghoot): `≥ 12.5%`
-   - Gold ETFs (goldMofid + nahal + sahar): `≥ 12.5%`
-   - Fixed Income ETFs (agas + sarv + atlas): `≥ 12.5%`
+### Outer GA fitness
 
-3. **Non-negativity**: `all weights ≥ 0` (no short selling)
-
-**ETF Categories:**
-```python
-Equity:       [afran, yaghoot]           # Indices 0-1
-Gold:         [goldMofid, nahal, sahar]  # Indices 2-4
-Fixed Income: [agas, sarv, atlas]        # Indices 5-7
-```
-
-### Fitness Function
-
-**Inner GA (Portfolio Weights):**
-```python
-fitness = weight_return * return_scaled - weight_risk * risk_scaled
-
-where:
-  return_scaled = (mean_return - min_return) / (max_return - min_return)
-  risk_scaled = (portfolio_std - min_std) / (max_std - min_std)
-```
-
-**Outer GA (Walk-Forward Parameters):**
-```python
-fitness = mean(daily_returns_across_all_test_periods)
-```
-
-### Adaptive Mutation & Early Stopping
-
-Both GAs use adaptive mutation rates:
-- **Initial**: 0.05 (5% mutation probability)
-- **High**: 0.1 (10% mutation probability)
-
-**Trigger Condition:**
-- If best fitness doesn't improve for 8 consecutive generations:
-  - Switch to high mutation rate (exploration)
-  - If still no improvement after high mutation period: stop (converged)
-
-**Selection:**
-- Top 75% of population selected for next generation
+Mean of concatenated **test-window** daily log returns from `walkForwardOptimization3` (maximization).
 
 ---
 
 ## Configuration
 
-### Modifying GA Parameters
+### GA sizes (current defaults)
 
-**In `main.py`:**
-```python
-gen_dict = GA2(
-    population_size=40,    # Outer GA population size
-    generations=10,         # Outer GA max generations
-    ...
-)
-```
+| Location | Setting | Value |
+|----------|---------|--------|
+| `main.py` | GA2 | `population_size=70`, `generations=40` |
+| `walkforward.py` | GA1 inside `walkForwardOptimization3` | `GA(100, 50, …)` |
+| `gaOpt1.py` / `gaOpt2.py` | Mutation | `0.05` → `0.1` when stalled (from gen ≥ 15) |
 
-**In `walkforward.py` (line 99):**
-```python
-gen_dict = GA(40, 10, p[0], allPossibleWeights, weight_return, weight_risk)
-#            ↑   ↑
-#         pop  gen (Inner GA parameters)
-```
+### Train/test split
 
-**In `gaOpt1.py` and `gaOpt2.py`:**
-```python
-initial_mutation_rate = 0.05  # 5%
-high_mutation_rate = 0.1     # 10%
-```
+In `main.py`, change `test_size` in `time_series_split(data_return, 0.2)`.  
+`generate_final_results` must receive the **same** `inSample_data` / `outSample_data` so Markowitz and equal-weight baselines align with GA out-of-sample dates.
 
-### Modifying Portfolio Constraints
+### Walk-forward search space
 
-**In `makeArrayOfWeights.py`:**
-```python
-def is_valid(gene):
-    return (
-        abs(sum(gene) - 1.0) < 1e-6 and
-        sum(gene[0:2]) >= 0.125 and  # Equity minimum
-        sum(gene[2:5]) >= 0.125 and  # Gold minimum
-        sum(gene[5:8]) >= 0.125 and  # Fixed income minimum
-        all(g >= 0 for g in gene)
-    )
-```
+`gaOpt2.generate_gene`: `test_period ∈ range(5, 251, 5)`, `train_period ∈ range(test_period, 251, 5)`.
 
-### Modifying Fitness Weights
+### Constraints and weight grid
 
-**In `fitness_ga1.py`:**
-```python
-weightReturn = 0.8  # Return importance (default)
-weightRisk = 0.2    # Risk importance (default)
-```
-
-**Note**: These defaults are overridden by user input in `main.py` for each risk profile.
-
-### Modifying Search Space
-
-**In `gaOpt2.py` (line 10, 14):**
-```python
-test_period = random.choice(range(5, 251, 5))  # 5 to 250, step 5
-train_period = random.choice(range(test_period, 251, 5))  # >= test_period
-```
+Edit `makeArrayOfWeights.is_valid` (floors, sum tolerance) or `step_values` (default 0.1) — larger steps reduce count and memory.
 
 ---
 
-## Output Files
+## Output files
 
-All outputs are saved in `finalOutputs/`:
+All under `finalOutputs/` after a successful `main.py` run:
 
-### Data Files
-- `optimal_parameters.json`: Optimal train/test periods and coefficients for each portfolio
-- `dailyReturn_highRisk.csv`: Daily log returns for high-risk portfolio
-- `dailyReturn_normalRisk.csv`: Daily log returns for balanced portfolio
-- `dailyReturn_lowRisk.csv`: Daily log returns for low-risk portfolio
-- `Results_metrics.csv`: Performance metrics (Mean Return, Std Dev, Sharpe Ratio, Cumulative Return %, MDD)
-- `Statistical_Tests_Results.csv`: Results of normality, variance, and comparison tests
+**Data**
 
-### Charts
-- `Cum_highRisk.png`: Cumulative return chart (high-risk)
-- `Cum_lowRisk.png`: Cumulative return chart (low-risk)
-- `Cum_normalRisk.png`: Cumulative return chart (balanced)
-- `Cum_portfolioS.png`: All portfolios cumulative return comparison
-- `DD_normalRisk.png`: Drawdown chart (balanced)
-- `DD_portfolioS.png`: All portfolios drawdown comparison
+| File | Description |
+|------|-------------|
+| `optimal_parameters.json` | Per-profile `train_period`, `test_period`, fitness, coefficients |
+| `dailyReturn_highRisk.csv` | GA high-risk test-window returns (walk-forward export) |
+| `dailyReturn_normalRisk.csv` | Balanced |
+| `dailyReturn_lowRisk.csv` | Low risk |
+| `markowitz_test_returns.csv` | Markowitz baseline, **out-of-sample** log returns |
+| `equal_weight_test_returns.csv` | Equal-weight baseline, **out-of-sample** log returns |
+| `Results_metrics.csv` | Mean log return, std, Sharpe, cumulative %, MDD per column |
+| `Statistical_Tests_Results.csv` | Shapiro, Levene, Mann–Whitney results |
 
----
+**Charts**
 
-## Notes & Best Practices
+| File | Description |
+|------|-------------|
+| `Cum_highRisk.png`, `Cum_lowRisk.png`, `Cum_normalRisk.png` | Cumulative wealth (exp cum log return); normalRisk panel adds benchmarks + baselines |
+| `Cum_portfolioS.png` | Three GA profiles |
+| `Cum_portfolioS-benchmarkS.png` | GA profiles + `agas`, `close_overal`, `markowitz`, `equalweight` |
+| `DD_normalRisk.png` | Drawdowns: normalRisk vs benchmarks/baselines |
+| `DD_portfolioS.png` | Drawdowns: three GA profiles |
+| `DD_portfolioS-benchmarkS.png` | Drawdowns: all of the above |
 
-1. **Computation Time**:
-   - Weight generation: ~2-5 minutes
-   - GA2 optimization: Several hours per portfolio (depends on data size)
-   - Daily return generation: ~1-2 hours per portfolio
-   - Consider running overnight or on a powerful machine
-
-2. **Random Seed**:
-   - Results may vary between runs (stochastic optimization)
-   - Set `np.random.seed()` for reproducibility if needed
-
-3. **Data Requirements**:
-   - Minimum 500 days of data recommended
-   - Daily frequency required
-   - No missing values in return series
-
-4. **Memory Usage**:
-   - `make_weights()` generates ~165K combinations (~10MB)
-   - Consider reducing step size in `makeArrayOfWeights.py` for memory constraints
-
-5. **Overfitting Prevention**:
-   - Walk-forward analysis provides out-of-sample validation
-   - Multiple test periods reduce overfitting risk
-   - Compare against benchmarks (agas, close_overal) in final evaluation
+Merged analytics use the **intersection** of dates across loaded series; ensure benchmarks and ETF data cover the out-of-sample window.
 
 ---
 
-## Troubleshooting
+## Notes and troubleshooting
 
-**Issue**: `ModuleNotFoundError: No module named 'scipy'`
-- **Solution**: Run `pip install -r requirements.txt`
-
-**Issue**: `FileNotFoundError: data/closeData.csv`
-- **Solution**: Ensure `closeData.csv` exists in the `data/` folder with correct format
-
-**Issue**: Long computation time
-- **Solution**: Reduce `population_size` or `generations` in `main.py` and `walkforward.py` (may affect solution quality)
-
-**Issue**: Memory error during weight generation
-- **Solution**: Modify `makeArrayOfWeights.py` to use larger step size (e.g., 0.2 instead of 0.1)
+1. **Stochastic runs** – GAs use randomness; set `numpy` / `random` seeds for reproducibility if needed.
+2. **Missing files** – `generate_final_results` warns if a portfolio CSV is missing; merge may fail or drop columns if benchmarks/baselines cannot align.
+3. **`ModuleNotFoundError` (e.g. scipy)** – `pip install -r requirements.txt`.
+4. **`FileNotFoundError: data/closeData.csv`** – add data under `data/` with expected columns.
+5. **Slow or heavy runs** – reduce GA2 settings in `main.py` and GA1 `(100, 50)` in `walkforward.py`; quality may suffer.
+6. **Memory** – shrinking the weight grid (e.g. step 0.2) reduces `make_weights()` size.
 
 ---
 
-**Last Updated**: January 2025
+**Last updated:** May 2026  
 
-**Version**: 2.0
+**Version:** 2.1 (README aligned with current `main.py`, walk-forward, and final evaluation stack)
