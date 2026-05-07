@@ -16,7 +16,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from scipy.stats import shapiro, levene, mannwhitneyu
-from markowitz_train_test import markowitz_train_test_project
+# from markowitz_train_test import markowitz_train_test_project
 from equal_weight_train_test import equal_weight_train_test_project
 import os
 
@@ -74,7 +74,8 @@ def plot_cumulative_returns(returns, output_dir, portfolios=['highRisk', 'lowRis
 
     # Combined portfolio chart & benchmarks
     plt.figure(figsize=(12, 6))
-    for portfolio in portfolios + ['agas', 'close_overal', 'markowitz', 'equalweight']:
+    # for portfolio in portfolios + ['agas', 'close_overal', 'markowitz', 'equalweight']:
+    for portfolio in portfolios + ['agas', 'close_overal', 'equalweight']:
         if portfolio in returns.columns:
             plt.plot(cumulative.index, cumulative[portfolio], label=portfolio, linewidth=2)
     plt.title('Cumulative Return - All Portfolios & Benchmarks', fontsize=14, fontweight='bold')
@@ -108,7 +109,8 @@ def plot_drawdowns(drawdowns, output_dir, portfolios=['highRisk', 'lowRisk']):
 
     # Combined drawdown chart2
     plt.figure(figsize=(12, 6))
-    for portfolio in portfolios + ['agas', 'close_overal', 'markowitz', 'equalweight']:
+    # for portfolio in portfolios + ['agas', 'close_overal', 'markowitz', 'equalweight']:
+    for portfolio in portfolios + ['agas', 'close_overal', 'equalweight']:
         if portfolio in drawdowns.columns:
             plt.plot(drawdowns.index, drawdowns[portfolio], label=portfolio, linewidth=2)
     plt.title('Drawdown Chart - All Portfolios & Benchmarks', fontsize=14, fontweight='bold')
@@ -149,8 +151,6 @@ def perform_statistical_tests(returns, output_dir):
         ('highRisk', 'lowRisk'),
         ('agas', 'highRisk'),
         ('agas', 'lowRisk'),
-        ('highRisk', 'markowitz'),
-        ('lowRisk', 'markowitz'),
         ('highRisk', 'equalweight'),
         ('lowRisk', 'equalweight')
     ]
@@ -167,37 +167,6 @@ def perform_statistical_tests(returns, output_dir):
             })
             print(f"Levene({pair[0]}, {pair[1]}): {stat:.6f} {p_value:.2e}")
     
-    # Mann-Whitney U Test
-    print("\n" + "="*80)
-    print("Mann-Whitney U Test")
-    print("="*80)
-    mw_pairs = [
-        ('lowRisk', 'highRisk'),
-        ('agas', 'highRisk'),
-        ('agas', 'lowRisk'),
-        ('close_overal', 'highRisk'),
-        ('close_overal', 'lowRisk'),
-        ('highRisk', 'markowitz'),
-        ('lowRisk', 'markowitz'),
-        ('highRisk', 'equalweight'),
-        ('lowRisk', 'equalweight')
-    ]
-    
-    for pair in mw_pairs:
-        if pair[0] in returns.columns and pair[1] in returns.columns:
-            u_stat, p_value = mannwhitneyu(
-                returns[pair[0]],
-                returns[pair[1]],
-                alternative='two-sided'
-            )
-            test_results.append({
-                'Test': 'Mann-Whitney U',
-                'Portfolio': f"{pair[0]} vs {pair[1]}",
-                'Statistic': u_stat,
-                'P-value': p_value,
-                'Interpretation': 'No significant difference' if p_value > 0.05 else 'Significant difference'
-            })
-            print(f"Mann-Whitney U ({pair[0]} vs {pair[1]}): {u_stat:.2f} {p_value:.6f}")
     
     # Save test results to CSV
     test_df = pd.DataFrame(test_results)
@@ -238,7 +207,7 @@ def generate_final_results(insample_returns, outsample_returns, output_dir="fina
     
     # markowitzModel & equalWeightModel
 
-    data_return_markowitz = markowitz_train_test_project(insample_returns, outsample_returns, save_test_returns_csv=True)
+    # data_return_markowitz = markowitz_train_test_project(insample_returns, outsample_returns, save_test_returns_csv=True)
     data_return_equalweight = equal_weight_train_test_project(insample_returns, outsample_returns, save_test_returns_csv=True)
 
     # Load portfolio return files
@@ -246,8 +215,8 @@ def generate_final_results(insample_returns, outsample_returns, output_dir="fina
     portfolio_files = {
         'highRisk': os.path.join(output_dir, 'dailyReturn_highRisk.csv'),
         'lowRisk': os.path.join(output_dir, 'dailyReturn_lowRisk.csv'),
-        'equalweight': os.path.join(output_dir, 'equal_weight_test_returns.csv'),
-        'markowitz': os.path.join(output_dir, 'markowitz_test_returns.csv')
+        'equalweight': os.path.join(output_dir, 'equal_weight_test_returns.csv')
+        # 'markowitz': os.path.join(output_dir, 'markowitz_test_returns.csv')
     }
     
     dfs = {}
@@ -266,7 +235,8 @@ def generate_final_results(insample_returns, outsample_returns, output_dir="fina
     
     # Merge all dataframes
     print("\nMerging data...")
-    df_merged = dfs['highRisk'].join([dfs['lowRisk'], df_index, dfs['equalweight'], dfs['markowitz']], how='inner')
+    # df_merged = dfs['highRisk'].join([dfs['lowRisk'], df_index, dfs['equalweight'], dfs['markowitz']], how='inner')
+    df_merged = dfs['highRisk'].join([dfs['lowRisk'], df_index, dfs['equalweight']], how='inner')
     returns = df_merged.copy().dropna()
     print(f"Merged data: {len(returns)} days, {len(returns.columns)} portfolios/benchmarks")
     
