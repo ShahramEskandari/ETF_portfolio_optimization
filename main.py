@@ -2,7 +2,7 @@
 Main Optimization Script - Complete Portfolio Optimization Pipeline
 
 This script:
-1. Asks user for risk and return coefficients for three portfolios (High Risk, Balanced, Low Risk)
+1. Asks user for risk and return coefficients for two portfolios (High Risk, Low Risk)
 2. Runs GA2 optimization for each portfolio to find optimal walk-forward parameters
 3. Saves optimal parameters to a file
 4. Generates final CSV files with daily returns for each portfolio
@@ -20,17 +20,16 @@ import json
 import os
 
 def get_user_coefficients():
-    """Get risk and return coefficients from user for three portfolios"""
+    """Get risk and return coefficients from user for two portfolios"""
     portfolios = {
         "high_risk": {"name": "High Risk", "default_return": 0.8, "default_risk": 0.2},
-        "balanced": {"name": "Balanced", "default_return": 0.5, "default_risk": 0.5},
         "low_risk": {"name": "Low Risk", "default_return": 0.2, "default_risk": 0.8}
     }
     
     coefficients = {}
     
     print("="*80)
-    print("Enter Risk and Return Coefficients for Three Portfolios")
+    print("Enter Risk and Return Coefficients for Two Portfolios")
     print("="*80)
     print("\nPlease enter coefficients (their sum must equal 1):\n")
     
@@ -171,7 +170,6 @@ print("="*80)
 
 csv_mapping = {
     "high_risk": os.path.join(output_dir, "dailyReturn_highRisk.csv"),
-    "balanced": os.path.join(output_dir, "dailyReturn_normalRisk.csv"),
     "low_risk": os.path.join(output_dir, "dailyReturn_lowRisk.csv")
 }
 
@@ -219,14 +217,13 @@ print("All Output Files:")
 print(f"All files are saved in the '{output_dir}/' folder:")
 print("  - optimal_parameters.json")
 print("  - dailyReturn_highRisk.csv")
-print("  - dailyReturn_normalRisk.csv")
 print("  - dailyReturn_lowRisk.csv")
 print("  - Results_metrics.csv")
 print("  - Statistical_Tests_Results.csv")
 print("  - Cum_highRisk.png")
 print("  - Cum_lowRisk.png")
-print("  - Cum_normalRisk.png")
 print("  - Cum_portfolioS.png")
-print("  - DD_normalRisk.png")
+print("  - Cum_portfolioS-benchmarkS.png")
 print("  - DD_portfolioS.png")
+print("  - DD_portfolioS-benchmarkS.png")
 print("="*80)

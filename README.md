@@ -4,7 +4,7 @@ A portfolio optimization system that uses **nested genetic algorithms** and **wa
 
 - Optimize ETF portfolio weights (inner GA, GA1)
 - Optimize walk-forward train/test window lengths (outer GA, GA2)
-- Evaluate three risk profiles (High Risk, Balanced, Low Risk) against **benchmark indices**, a **Markowitz (max-Sharpe)** baseline, and an **equal-weight** baseline
+- Evaluate two risk profiles (High Risk, Low Risk) against **benchmark indices**, a **Markowitz (max-Sharpe)** baseline, and an **equal-weight** baseline
 
 Log returns are built from `data/closeData.csv`. **GA2 is fitted only on the in-sample slice** (first 80% of trading days by default). **Out-of-sample** is the remaining 20%; final evaluation merges GA portfolios, benchmarks, and baselines on overlapping dates.
 
@@ -33,7 +33,7 @@ Running `python main.py` drives the full pipeline and writes outputs under `fina
 1. **Outer GA (GA2, `gaOpt2.py`)** – optimizes walk-forward parameters:
    - `train_period`: training window length (rows / trading days)
    - `test_period`: test window length  
-   Constraint: `train_period >= test_period`; both are drawn from `{5, 10, …, 250}`.
+   Constraint: `train_period >= test_period`; both are drawn from `{10, 20, …, 200}`.
 
 2. **Inner GA (GA1, `gaOpt1.py`)** – optimizes weights for an **8-ETF** long-only portfolio under the same asset-class floors as `makeArrayOfWeights.is_valid`.
 
@@ -64,7 +64,7 @@ ETF_portfolio_optimization/
 │   ├── closeData.csv              # Close prices (required)
 │   └── logRetBenchETF.csv         # Benchmark log returns (required for final eval)
 │
-├── main.py                        # Entry: split data, GA2 × 3, CSVs, generate_final_results
+├── main.py                        # Entry: split data, GA2 × 2, CSVs, generate_final_results
 ├── gaOpt1.py                      # Inner GA: portfolio weights
 ├── gaOpt2.py                      # Outer GA: walk-forward lengths
 ├── fitness_ga1.py                 # Inner-GA fitness (scaled return − risk)
@@ -77,7 +77,6 @@ ETF_portfolio_optimization/
 ├── finalOutputs/                  # Created at run time (not shipped)
 │   ├── optimal_parameters.json
 │   ├── dailyReturn_highRisk.csv
-│   ├── dailyReturn_normalRisk.csv  # Balanced profile
 │   ├── dailyReturn_lowRisk.csv
 │   ├── markowitz_test_returns.csv
 │   ├── equal_weight_test_returns.csv
@@ -171,7 +170,7 @@ python main.py
 - `get_user_coefficients()` – interactive return/risk weights.
 - `save_optimal_parameters()` / `load_optimal_parameters()` – JSON I/O (load helper exists; pipeline saves after GA2).
 - `time_series_split` – 80% in-sample / 20% out-of-sample.
-- Orchestrates weights → GA2 × 3 → CSVs → `generate_final_results`.
+- Orchestrates weights → GA2 × 2 → CSVs → `generate_final_results`.
 
 ### `gaOpt1.py` (inner GA)
 
@@ -265,7 +264,7 @@ In `main.py`, change `test_size` in `time_series_split(data_return, 0.2)`.
 
 ### Walk-forward search space
 
-`gaOpt2.generate_gene`: `test_period ∈ range(5, 251, 5)`, `train_period ∈ range(test_period, 251, 5)`.
+`gaOpt2.generate_gene`: `test_period ∈ range(10, 201, 10)`, `train_period ∈ range(test_period, 201, 10)`.
 
 ### Constraints and weight grid
 
@@ -283,7 +282,6 @@ All under `finalOutputs/` after a successful `main.py` run:
 |------|-------------|
 | `optimal_parameters.json` | Per-profile `train_period`, `test_period`, fitness, coefficients |
 | `dailyReturn_highRisk.csv` | GA high-risk test-window returns (walk-forward export) |
-| `dailyReturn_normalRisk.csv` | Balanced |
 | `dailyReturn_lowRisk.csv` | Low risk |
 | `markowitz_test_returns.csv` | Markowitz baseline, **out-of-sample** log returns |
 | `equal_weight_test_returns.csv` | Equal-weight baseline, **out-of-sample** log returns |
@@ -294,11 +292,10 @@ All under `finalOutputs/` after a successful `main.py` run:
 
 | File | Description |
 |------|-------------|
-| `Cum_highRisk.png`, `Cum_lowRisk.png`, `Cum_normalRisk.png` | Cumulative wealth (exp cum log return); normalRisk panel adds benchmarks + baselines |
-| `Cum_portfolioS.png` | Three GA profiles |
+| `Cum_highRisk.png`, `Cum_lowRisk.png` | Cumulative wealth (exp cum log return) |
+| `Cum_portfolioS.png` | Two GA profiles |
 | `Cum_portfolioS-benchmarkS.png` | GA profiles + `agas`, `close_overal`, `markowitz`, `equalweight` |
-| `DD_normalRisk.png` | Drawdowns: normalRisk vs benchmarks/baselines |
-| `DD_portfolioS.png` | Drawdowns: three GA profiles |
+| `DD_portfolioS.png` | Drawdowns: two GA profiles |
 | `DD_portfolioS-benchmarkS.png` | Drawdowns: all of the above |
 
 Merged analytics use the **intersection** of dates across loaded series; ensure benchmarks and ETF data cover the out-of-sample window.

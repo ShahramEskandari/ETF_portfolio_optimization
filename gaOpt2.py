@@ -6,12 +6,12 @@ from walkforward import *
 
 # define range for each gene
 def generate_gene(): 
-    # Generate the test period (between 5 and 250 days, in steps of 5)
-    test_period = random.choice(range(5, 251, 5))
+    # Generate the test period (between 10 and 200 days, in steps of 10)
+    test_period = random.choice(range(10, 201, 10))
     #test_period = random.choice(range(20, 100, 5))
     
-    # Generate the train period (between 5 and 250 days, in steps of 5) such that train_period >= test_period
-    train_period = random.choice(range(test_period, 251, 5))  # Train period must be >= test period
+    # Generate the train period (between 10 and 200 days, in steps of 10) such that train_period >= test_period
+    train_period = random.choice(range(test_period, 201, 10))  # Train period must be >= test period
     #train_period = random.choice(range(test_period, 100, 5))  # Train period must be >= test period
     
     # Return the chromosome as a tuple (train_period, test_period)
@@ -101,10 +101,10 @@ def mutation(individuals, mutation_rate,data,entire_params_dict, allPossibleWeig
         for g in range(len(individuals[i])):
             if random.random() < mutation_rate:
                 if g == 0:
-                    individuals[i][g] = random.choice(range(int(individuals[i][1]), 251, 5))
+                    individuals[i][g] = random.choice(range(int(individuals[i][1]), 201, 10))
                     #individuals[i][g] = random.choice(range(int(individuals[i][1]), 100, 5))
-                elif g == 1 and individuals[i][0] != 5:
-                    individuals[i][g] = random.choice(range(5, int(individuals[i][0]), 5))
+                elif g == 1 and individuals[i][0] != 10:
+                    individuals[i][g] = random.choice(range(10, int(individuals[i][0]), 10))
                     #individuals[i][g] = random.choice(range(20, int(individuals[i][0]), 5))
 
         if (individuals[i][0] >= individuals[i][1]):

@@ -36,7 +36,7 @@ def calculate_metrics(returns):
     
     return metrics, drawdown
 
-def plot_cumulative_returns(returns, output_dir, portfolios=['highRisk', 'lowRisk', 'normalRisk']):
+def plot_cumulative_returns(returns, output_dir, portfolios=['highRisk', 'lowRisk']):
     """Generate cumulative return charts"""
     cumulative = np.exp(returns.cumsum())
     
@@ -45,11 +45,6 @@ def plot_cumulative_returns(returns, output_dir, portfolios=['highRisk', 'lowRis
         if portfolio in returns.columns:
             plt.figure(figsize=(12, 6))
             plt.plot(cumulative.index, cumulative[portfolio], label=portfolio, linewidth=2)
-            # For normalRisk, also show benchmarks (agas, close_overal)
-            if portfolio == 'normalRisk':
-                for bench in ['agas', 'close_overal', 'markowitz', 'equalweight']:
-                    if bench in cumulative.columns:
-                        plt.plot(cumulative.index, cumulative[bench], label=bench, linewidth=2)
             plt.title(f'Cumulative Return - {portfolio}', fontsize=14, fontweight='bold')
             plt.xlabel('Date', fontsize=12)
             plt.ylabel('Cumulative Return', fontsize=12)
@@ -93,26 +88,8 @@ def plot_cumulative_returns(returns, output_dir, portfolios=['highRisk', 'lowRis
     plt.close()
     print(f"  Saved: {filename}")
 
-def plot_drawdowns(drawdowns, output_dir, portfolios=['highRisk', 'lowRisk', 'normalRisk']):
+def plot_drawdowns(drawdowns, output_dir, portfolios=['highRisk', 'lowRisk']):
     """Generate drawdown charts"""
-    # Individual drawdown chart for normalRisk (with benchmarks agas, close_overal)
-    if 'normalRisk' in drawdowns.columns:
-        plt.figure(figsize=(12, 6))
-        plt.plot(drawdowns.index, drawdowns['normalRisk'], label='normalRisk', linewidth=2)
-        for bench in ['agas', 'close_overal', 'markowitz', 'equalweight']:
-            if bench in drawdowns.columns:
-                plt.plot(drawdowns.index, drawdowns[bench], label=bench, linewidth=2)
-        plt.title('Drawdown Chart - normalRisk', fontsize=14, fontweight='bold')
-        plt.xlabel('Date', fontsize=12)
-        plt.ylabel('Drawdown', fontsize=12)
-        plt.legend()
-        plt.grid(True, alpha=0.3)
-        plt.tight_layout()
-        filename = os.path.join(output_dir, 'DD_normalRisk.png')
-        plt.savefig(filename, dpi=300, bbox_inches='tight')
-        plt.close()
-        print(f"  Saved: {filename}")
-    
     # Combined drawdown chart
     plt.figure(figsize=(12, 6))
     for portfolio in portfolios:
@@ -169,16 +146,13 @@ def perform_statistical_tests(returns, output_dir):
     print("Levene Test (Variance Equality)")
     print("="*80)
     test_pairs = [
-        ('agas', 'normalRisk'),
-        ('highRisk', 'normalRisk'),
-        ('lowRisk', 'normalRisk'),
         ('highRisk', 'lowRisk'),
+        ('agas', 'highRisk'),
+        ('agas', 'lowRisk'),
         ('highRisk', 'markowitz'),
         ('lowRisk', 'markowitz'),
-        ('normalRisk', 'markowitz'),
         ('highRisk', 'equalweight'),
-        ('lowRisk', 'equalweight'),
-        ('normalRisk', 'equalweight')
+        ('lowRisk', 'equalweight')
     ]
     
     for pair in test_pairs:
@@ -198,17 +172,15 @@ def perform_statistical_tests(returns, output_dir):
     print("Mann-Whitney U Test")
     print("="*80)
     mw_pairs = [
-        ('agas', 'normalRisk'),
-        ('close_overal', 'normalRisk'),
-        ('highRisk', 'normalRisk'),
         ('lowRisk', 'highRisk'),
-        ('lowRisk', 'normalRisk'),
+        ('agas', 'highRisk'),
+        ('agas', 'lowRisk'),
+        ('close_overal', 'highRisk'),
+        ('close_overal', 'lowRisk'),
         ('highRisk', 'markowitz'),
         ('lowRisk', 'markowitz'),
-        ('normalRisk', 'markowitz'),
         ('highRisk', 'equalweight'),
-        ('lowRisk', 'equalweight'),
-        ('normalRisk', 'equalweight')
+        ('lowRisk', 'equalweight')
     ]
     
     for pair in mw_pairs:
@@ -274,7 +246,6 @@ def generate_final_results(insample_returns, outsample_returns, output_dir="fina
     portfolio_files = {
         'highRisk': os.path.join(output_dir, 'dailyReturn_highRisk.csv'),
         'lowRisk': os.path.join(output_dir, 'dailyReturn_lowRisk.csv'),
-        'normalRisk': os.path.join(output_dir, 'dailyReturn_normalRisk.csv'),
         'equalweight': os.path.join(output_dir, 'equal_weight_test_returns.csv'),
         'markowitz': os.path.join(output_dir, 'markowitz_test_returns.csv')
     }
@@ -295,7 +266,7 @@ def generate_final_results(insample_returns, outsample_returns, output_dir="fina
     
     # Merge all dataframes
     print("\nMerging data...")
-    df_merged = dfs['highRisk'].join([dfs['lowRisk'], dfs['normalRisk'], df_index, dfs['equalweight'], dfs['markowitz']], how='inner')
+    df_merged = dfs['highRisk'].join([dfs['lowRisk'], df_index, dfs['equalweight'], dfs['markowitz']], how='inner')
     returns = df_merged.copy().dropna()
     print(f"Merged data: {len(returns)} days, {len(returns.columns)} portfolios/benchmarks")
     
@@ -340,9 +311,7 @@ def generate_final_results(insample_returns, outsample_returns, output_dir="fina
     print(f"  - Statistical_Tests_Results.csv")
     print(f"  - Cum_highRisk.png")
     print(f"  - Cum_lowRisk.png")
-    print(f"  - Cum_normalRisk.png")
     print(f"  - Cum_portfolioS.png")
-    print(f"  - DD_normalRisk.png")
     print(f"  - DD_portfolioS.png")
     print("="*80)
 
