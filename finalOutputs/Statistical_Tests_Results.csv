@@ -1,0 +1,11 @@
+Test,Portfolio,Statistic,P-value,Interpretation
+Shapiro-Wilk,highRisk,0.963554498366299,0.00012330789675901404,Not Normal
+Shapiro-Wilk,lowRisk,0.9515419900495593,7.882821275844618e-06,Not Normal
+Shapiro-Wilk,agas,0.9826647685266332,0.024696682511750005,Not Normal
+Shapiro-Wilk,close_overal,0.9845578134190204,0.044514923428694037,Not Normal
+Shapiro-Wilk,equalweight,0.9650800451288793,0.0001799327439851365,Not Normal
+Levene,highRisk vs lowRisk,67.21329228106757,4.400530140032816e-15,Different Variances
+Levene,agas vs highRisk,42.60128468424169,2.2976591512361666e-10,Different Variances
+Levene,agas vs lowRisk,179.2021705173949,2.04699978434974e-33,Different Variances
+Levene,highRisk vs equalweight,6.004842535578307,0.014744542463972136,Different Variances
+Levene,lowRisk vs equalweight,53.56936369936858,1.657662014864339e-12,Different Variances

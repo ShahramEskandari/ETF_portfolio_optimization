@@ -1,0 +1,18 @@
+{
+    "high_risk": {
+        "train_period": 50,
+        "test_period": 20,
+        "fitness": 0.0019652103825108526,
+        "weight_return": 0.9,
+        "weight_risk": 0.1,
+        "name": "High Risk"
+    },
+    "low_risk": {
+        "train_period": 90,
+        "test_period": 60,
+        "fitness": 0.00128297595614313,
+        "weight_return": 0.2,
+        "weight_risk": 0.8,
+        "name": "Low Risk"
+    }
+}
