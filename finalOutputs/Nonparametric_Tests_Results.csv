@@ -1,0 +1,24 @@
+Test,Detail,Statistic,p-value,Significant
+Mann-Whitney U,highRisk vs AGAS fund,16420.0,0.8240566118802338,No
+Mann-Whitney U,highRisk vs total market index (close_overal),17025.0,0.40364333489692017,No
+Mann-Whitney U,highRisk vs equal-weight,17421.0,0.21636988555728986,No
+Mann-Whitney U,lowRisk vs AGAS fund,15960.0,0.8083242662927824,No
+Mann-Whitney U,lowRisk vs total market index (close_overal),16385.0,0.8517553744789221,No
+Mann-Whitney U,lowRisk vs equal-weight,16783.0,0.5551829669133654,No
+Kruskal-Wallis,all 5 series,1.4534,0.8348631191002859,No
+Wilcoxon signed-rank,highRisk - AGAS fund,8075.0,0.9203489831540151,No
+Wilcoxon signed-rank,highRisk - total market index (close_overal),6816.0,0.05763550661043906,No
+Wilcoxon signed-rank,highRisk - equal-weight,6564.0,0.023918308441039746,Yes
+Wilcoxon signed-rank,lowRisk - AGAS fund,7586.0,0.4245661362836449,No
+Wilcoxon signed-rank,lowRisk - total market index (close_overal),8024.0,0.8627716910664295,No
+Wilcoxon signed-rank,lowRisk - equal-weight,8076.0,0.9214831480309567,No
+Shapiro-Wilk,highRisk,0.963554,0.00012330789675903147,
+Shapiro-Wilk,lowRisk,0.951542,7.882821275844176e-06,
+Shapiro-Wilk,AGAS fund,0.982665,0.024696682511750005,
+Shapiro-Wilk,total market index (close_overal),0.984558,0.044514923428694037,
+Shapiro-Wilk,equal-weight,0.96508,0.0001799327439851532,
+Levene,highRisk vs lowRisk,67.213292,4.400530140032816e-15,
+Levene,agas vs highRisk,42.601285,2.2976591512361664e-10,
+Levene,agas vs lowRisk,179.202171,2.04699978434974e-33,
+Levene,highRisk vs equalweight,6.004843,0.014744542463971966,
+Levene,lowRisk vs equalweight,53.569364,1.657662014864339e-12,

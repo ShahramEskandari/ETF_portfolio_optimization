@@ -1,0 +1,6 @@
+Series,Mean Daily Return,Std Daily Return,Sharpe (rf=0),Cumulative Return %,Max Drawdown %
+highRisk,0.0024,0.01,0.2352,52.7586,-5.6808
+lowRisk,0.0015,0.0036,0.4049,30.3644,-1.3052
+AGAS fund,0.0022,0.0168,0.133,49.5266,-12.8536
+total market index (close_overal),0.0018,0.0104,0.1709,37.624,-11.4777
+equal-weight,0.0016,0.0074,0.2157,33.4311,-3.4499
