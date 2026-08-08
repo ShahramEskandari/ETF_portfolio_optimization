@@ -105,6 +105,8 @@ ETF_portfolio_optimization/
 │
 ├── analysis_alpha_beta_sensitivity.py   # Optional: alpha/beta sensitivity
 ├── analysis_nonparametric_tests.py      # Optional: extra statistical tests
+├── analysis_rf_sharpe.py                # Optional: Sharpe with nonzero rf
+├── analysis_pso_comparison.py           # Optional: GA vs PSO comparison
 ├── ga1_parameter_study.py               # Optional: GA1 hyperparameter study
 │
 ├── finalOutputs/                  # Complete results shipped with this repo
@@ -183,6 +185,8 @@ Not required for the main pipeline:
 ```bash
 python analysis_alpha_beta_sensitivity.py
 python analysis_nonparametric_tests.py
+python analysis_rf_sharpe.py
+python analysis_pso_comparison.py
 python ga1_parameter_study.py
 ```
 
@@ -253,35 +257,36 @@ Shows that `(alpha, beta)` behaves as a risk-preference dial.
 
 ### 2) `analysis_nonparametric_tests.py`
 
-Extra distribution-free tests on **already generated** return series (no re-optimization).
+Extra distribution-free tests on already generated return series (no re-optimization):
+Mann–Whitney, Kruskal–Wallis, Wilcoxon, Shapiro, Levene (including pairs vs `close_overal`).
 
-Reports:
-- Mann–Whitney U
-- Kruskal–Wallis
-- Paired Wilcoxon signed-rank
-- Shapiro–Wilk and Levene re-confirmation
-- Recomputed descriptive metrics on the same joined sample
+Outputs: `Nonparametric_Tests_Results.csv`, `Table2_metrics_recomputed.csv`
 
-Outputs:
-- `Nonparametric_Tests_Results.csv`
-- `Table2_metrics_recomputed.csv`
+### 3) `analysis_rf_sharpe.py`
 
-### 3) `ga1_parameter_study.py`
+Computes Sharpe ratios with a nonzero annual risk-free rate (main case **20%**), plus sensitivity across rf = 0/15/20/25/30%.  
+Also appends a `sharpe_rf20` column to `AlphaBeta_Sensitivity.csv`.
 
-OFAT justification of inner-GA hyperparameters around the published setting  
-(`population=100`, `generations=50`, `initial mutation=0.05`).
+Outputs: `Results_metrics_rf20.csv`, `Sharpe_RF_Sensitivity.csv` (and updates `AlphaBeta_Sensitivity.csv`)
 
-This study uses `alpha=0.9`, `beta=0.1` and fixed windows `train=50`, `test=20` on **in-sample** data only.
+### 4) `analysis_pso_comparison.py`
 
-Outputs:
-- `GA1_parameter_study.csv`
-- `GA1_parameter_study_raw.csv`
+Compares inner GA vs Particle Swarm Optimization under the same fitness, constraints, and fixed walk-forward window (`train=70`, `test=40`), for both risk profiles.
+
+Output: `PSO_vs_GA_Comparison.csv`
+
+### 5) `ga1_parameter_study.py`
+
+OFAT study of inner-GA hyperparameters around `population=100`, `generations=50`, `initial mutation=0.05`  
+(on in-sample data; `alpha=0.9`, `beta=0.1`, windows `50/20`).
+
+Outputs: `GA1_parameter_study.csv`, `GA1_parameter_study_raw.csv`
 
 ---
 
 ## Contents of `finalOutputs/`
 
-The repository currently ships **17 files**. Exact inventory:
+The repository currently ships **20 files**:
 
 ### A) Main pipeline results
 
@@ -304,35 +309,31 @@ The repository currently ships **17 files**. Exact inventory:
 
 | File | Produced by |
 |---|---|
-| `AlphaBeta_Sensitivity.csv` | `analysis_alpha_beta_sensitivity.py` |
+| `AlphaBeta_Sensitivity.csv` | `analysis_alpha_beta_sensitivity.py` (+ `sharpe_rf20` from `analysis_rf_sharpe.py`) |
 | `Nonparametric_Tests_Results.csv` | `analysis_nonparametric_tests.py` |
 | `Table2_metrics_recomputed.csv` | `analysis_nonparametric_tests.py` |
+| `Results_metrics_rf20.csv` | `analysis_rf_sharpe.py` |
+| `Sharpe_RF_Sensitivity.csv` | `analysis_rf_sharpe.py` |
+| `PSO_vs_GA_Comparison.csv` | `analysis_pso_comparison.py` |
 | `GA1_parameter_study.csv` | `ga1_parameter_study.py` |
 | `GA1_parameter_study_raw.csv` | `ga1_parameter_study.py` |
 
-### Consistency notes for these files
+### Consistency notes
 
-1. **Metrics sample:** `Results_metrics.csv` and `Table2_metrics_recomputed.csv` describe the same five series on the joined dates. Values match (rounding differences only).
-2. **MDD units differ by file:**
-   - `Results_metrics.csv`: MDD as a **fraction** (e.g. `-0.0568`)
-   - `Table2_metrics_recomputed.csv` / `AlphaBeta_Sensitivity.csv`: MDD as a **percent** (e.g. `-5.6808`)
-3. **Statistical files are complementary, not duplicates:**
-   - `Statistical_Tests_Results.csv` → Shapiro + Levene from `generate_final_results.py`
-   - `Nonparametric_Tests_Results.csv` → Mann–Whitney, Kruskal–Wallis, Wilcoxon (+ Shapiro/Levene re-check)
-4. **Equal-weight raw length (196) > joined length (180):** this is expected; evaluation always uses the inner join.
+1. `Results_metrics.csv` and `Table2_metrics_recomputed.csv` match on the joined 180-day sample.
+2. MDD units: fraction in `Results_metrics.csv`; percent in Table2 / AlphaBeta / RF / PSO files.
+3. Alpha/beta and PSO studies use a **fixed** window `70/40` (not the GA2-optimized windows in the main tables).
+4. If `analysis_alpha_beta_sensitivity.py` is re-run, re-run `analysis_rf_sharpe.py` afterward to restore `sharpe_rf20`.
 
 ---
 
 ## Notes for reviewers
 
-1. **Stochastic optimization:** GA results can vary across runs unless seeds are fixed. Optional analysis scripts use explicit seeds.
-2. **Main vs optional:**
-   - Main results: `python main.py`
-   - Extra robustness checks: the three optional scripts above
-3. **No look-ahead in outer search:** GA2 uses in-sample data only. Reported comparison metrics are out-of-sample (joined dates).
-4. **Markowitz:** implemented but currently disabled; not part of shipped `finalOutputs/`.
-5. **Computational cost:** nested GA evaluation is expensive because each outer candidate triggers many inner GA runs.
+1. Genetic algorithms are stochastic; optional scripts use fixed seeds where needed.
+2. Main results: `python main.py`. Extra checks: the optional analysis scripts above.
+3. GA2 uses in-sample data only; reported comparison metrics are out-of-sample (joined dates).
+4. Nested GA evaluation is computationally expensive.
 
 ---
 
-**Last updated:** July 2026
+**Last updated:** August 2026
