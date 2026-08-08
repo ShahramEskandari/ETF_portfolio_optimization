@@ -171,11 +171,14 @@ def run_shapiro(returns):
 
 
 def run_levene(returns):
-    # Same pairs cited in generate_final_results.perform_statistical_tests.
+    # Same pairs cited in generate_final_results.perform_statistical_tests,
+    # plus the two overall-index pairs reported in the revised Section 4.3.
     test_pairs = [
         ("highRisk", "lowRisk"),
         ("agas", "highRisk"),
         ("agas", "lowRisk"),
+        ("highRisk", "close_overal"),
+        ("lowRisk", "close_overal"),
         ("highRisk", "equalweight"),
         ("lowRisk", "equalweight"),
     ]
